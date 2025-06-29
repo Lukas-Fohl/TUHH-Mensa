@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	//"os"
 	"net/http"
+	"html"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +35,27 @@ func getTitles(stringIn string) []string {
 	for idx, dat := range lineSplit {
 		if idx < len(lineSplit)-1 && strings.Contains(dat, "h5") && !strings.Contains(dat, "</h5>") {
 			tempLine := strings.Trim(lineSplit[idx+1], " \t")
+			tempLine = strings.TrimSpace(tempLine)
+			tempLine = html.UnescapeString(tempLine)			
 			output = append(output, tempLine)
+		}
+	}
+
+	return output
+}
+
+func getPrices(stringIn string) []string {
+	output := []string{}
+	lineSplit := strings.Split(stringIn, "\n")
+	for idx, dat := range lineSplit {
+		if idx < len(lineSplit)-1 && strings.Contains(dat, "<span class=\"singlemeal__info--semibold\">") {
+			tempLine := strings.Trim(lineSplit[idx+1], " \t")
+			tempLine = strings.ReplaceAll(tempLine, "&#8364;", "")
+			tempLine = strings.TrimSpace(tempLine)
+			_, err := strconv.ParseFloat(strings.ReplaceAll(tempLine, ",", "."), 32)
+			if err == nil {
+				output = append(output, tempLine)
+			}
 		}
 	}
 
@@ -59,7 +81,7 @@ func getHTMLElement(stringIn string) []string {
 		}
 
 		if lineSplit[idx] == "</div>" {
-			if recording == true {
+			if recording {
 				output = append(output, "")
 				elementIdx++
 			}
@@ -91,6 +113,7 @@ func removeParen(stringIn string) string {
 
 	tempLine = strings.ReplaceAll(tempLine, "  ", " ")
 	tempLine = strings.ReplaceAll(tempLine, " ,", ",")
+	tempLine = strings.TrimSuffix(tempLine, " ")
 	return tempLine
 }
 
@@ -99,27 +122,56 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	/*
-		dat, err := os.ReadFile("out.html")
-		if err != nil {
-			panic(err)
-		}
+	dat, err := os.ReadFile("out.html")
+	if err != nil {
+		panic(err)
+	}
 	*/
 
-	outline := ""
-	foodTitles := getTitles(string(dat))
+	lines := strings.Split(string(dat), "\n")
+	finishedLines := []string{}
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			finishedLines = append(finishedLines, line)
+		}
+	}
+	newDat := strings.Join(finishedLines, "\n")
+
+	foodTitles := getTitles(newDat)
 	if len(foodTitles) == 0 {
 		return
 	}
 
-	for _, dat := range foodTitles {
-		outline += "•" + removeParen(dat) + "\n"
+	foodPrices := getPrices(newDat)
+	if len(foodPrices) == 0 {
+		return
+	}
+
+	addTitles := false
+	if(len(foodTitles)*3 == len(foodPrices)){
+		addTitles = true
+	}
+
+	outline := ""
+
+	for i, dat := range foodTitles {
+		outline += "• " + removeParen(dat)
+		if addTitles {
+			outline += " - " + foodPrices[i*3] + "€"
+		}
+		if i < len(foodTitles)-1 {
+			outline += "\n"
+		}
 	}
 
 	now := time.Now()
 	day := now.Day()
 	month := int(now.Month())
 	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month)
+	//fmt.Println(title)
+	//fmt.Println(outline)
 
 	req, _ := http.NewRequest("POST", NTFY_LINK,
 		strings.NewReader(outline))
