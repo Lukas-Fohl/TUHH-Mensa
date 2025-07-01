@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
-	//"os"
-	"net/http"
 	"html"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -34,9 +33,8 @@ func getTitles(stringIn string) []string {
 	lineSplit := strings.Split(stringIn, "\n")
 	for idx, dat := range lineSplit {
 		if idx < len(lineSplit)-1 && strings.Contains(dat, "h5") && !strings.Contains(dat, "</h5>") {
-			tempLine := strings.Trim(lineSplit[idx+1], " \t")
-			tempLine = strings.TrimSpace(tempLine)
-			tempLine = html.UnescapeString(tempLine)			
+			tempLine := strings.TrimSpace(lineSplit[idx+1])
+			tempLine = html.UnescapeString(tempLine)
 			output = append(output, tempLine)
 		}
 	}
@@ -49,8 +47,7 @@ func getPrices(stringIn string) []string {
 	lineSplit := strings.Split(stringIn, "\n")
 	for idx, dat := range lineSplit {
 		if idx < len(lineSplit)-1 && strings.Contains(dat, "<span class=\"singlemeal__info--semibold\">") {
-			tempLine := strings.Trim(lineSplit[idx+1], " \t")
-			tempLine = strings.ReplaceAll(tempLine, "&#8364;", "")
+			tempLine := strings.ReplaceAll(lineSplit[idx+1], "&#8364;", "")
 			tempLine = strings.TrimSpace(tempLine)
 			_, err := strconv.ParseFloat(strings.ReplaceAll(tempLine, ",", "."), 32)
 			if err == nil {
@@ -99,15 +96,12 @@ func removeParen(stringIn string) string {
 		switch dat {
 		case '(':
 			depth++
-			break
 		case ')':
 			depth--
-			break
 		default:
 			if depth <= 0 {
 				tempLine += string(dat)
 			}
-			break
 		}
 	}
 
@@ -124,10 +118,10 @@ func main() {
 	}
 
 	/*
-	dat, err := os.ReadFile("out.html")
-	if err != nil {
-		panic(err)
-	}
+		dat, err := os.ReadFile("out.html")
+		if err != nil {
+			panic(err)
+		}
 	*/
 
 	lines := strings.Split(string(dat), "\n")
@@ -145,12 +139,9 @@ func main() {
 	}
 
 	foodPrices := getPrices(newDat)
-	if len(foodPrices) == 0 {
-		return
-	}
 
 	addTitles := false
-	if(len(foodTitles)*3 == len(foodPrices)){
+	if len(foodTitles)*3 == len(foodPrices) {
 		addTitles = true
 	}
 
