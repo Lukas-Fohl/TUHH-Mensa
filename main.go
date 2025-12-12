@@ -5,6 +5,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -111,6 +112,71 @@ func removeParen(stringIn string) string {
 	return tempLine
 }
 
+func checkSchnitzel(stringIn []string, counter int) int {
+	tempCount := counter
+	temp := strings.Join(stringIn, ",")
+	strTrans := strings.ToLower(temp)
+	if strings.Contains(strTrans, "putenschnitzel") {
+		tempCount++
+	}
+	return tempCount
+}
+
+func trackSchnitzel(stringIn []string, day int) string {
+	counter := 0
+	dayCheck := 0
+	fileIsNew := false
+
+	fName := "counter.schnitzel"
+	content, err := os.ReadFile(fName)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("File '%s' doesn't exist, creating it now\n", fName)
+			fileIsNew = true
+		} else {
+			fmt.Printf("Error reading file: %v\n", err)
+			return strconv.Itoa(counter)
+		}
+	}
+
+	if !fileIsNew {
+		var parseErr error
+
+		data := strings.Split(string(content), ";")
+		if len(data) != 2 {
+			fmt.Println("Something went wrong with the file, returning default value for counter")
+			return strconv.Itoa(counter)
+		}
+
+		counter, parseErr = strconv.Atoi(data[0])
+		CheckConversion(parseErr)
+
+		dayCheck, parseErr = strconv.Atoi(data[1])
+		CheckConversion(parseErr)
+	}
+
+	if dayCheck == day {
+		return strconv.Itoa(counter)
+	}
+
+	augmentedCounter := checkSchnitzel(stringIn, counter)
+
+	updatedContent := []byte(strconv.Itoa(augmentedCounter) + ";" + strconv.Itoa(day))
+	err = os.WriteFile(fName, updatedContent, 0666)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+	}
+
+	return strconv.Itoa(augmentedCounter)
+}
+
+func CheckConversion(err error) {
+	if err != nil {
+		fmt.Printf("Failed to convert a value: %v\n", err)
+		panic(err)
+	}
+}
+
 func main() {
 	dat, err := makeHTTPRequest(MENSA_LINK)
 	if err != nil {
@@ -160,7 +226,8 @@ func main() {
 	now := time.Now()
 	day := now.Day()
 	month := int(now.Month())
-	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month)
+	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month) +
+		"   Wie oft gab es schon schnitzel? : " + trackSchnitzel(foodTitles, day) + " 🤯"
 	//fmt.Println(title)
 	//fmt.Println(outline)
 
