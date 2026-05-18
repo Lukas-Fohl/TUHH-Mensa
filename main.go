@@ -127,7 +127,7 @@ func trackSchnitzel(stringIn []string, day int) string {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	fName := osHome + string(os.PathSeparator) + ".counter.schnitzel"
 	content, err := os.ReadFile(fName)
 	if err != nil {
@@ -178,6 +178,10 @@ func trackSchnitzel(stringIn []string, day int) string {
 }
 
 func main() {
+	if NTFY_LINK == "" {
+		panic("please fill in the link for ntfy")
+	}
+
 	dat, err := makeHTTPRequest(MENSA_LINK)
 	if err != nil {
 		panic(err)
