@@ -112,14 +112,10 @@ func removeParen(stringIn string) string {
 	return tempLine
 }
 
-func checkSchnitzel(stringIn []string, counter int) int {
-	tempCount := counter
+func checkSchnitzel(stringIn []string) bool {
 	temp := strings.Join(stringIn, ",")
 	strTrans := strings.ToLower(temp)
-	if strings.Contains(strTrans, "putenschnitzel") {
-		tempCount++
-	}
-	return tempCount
+	return strings.Contains(strTrans, "schnitzel")
 }
 
 func trackSchnitzel(stringIn []string, day int) string {
@@ -127,7 +123,12 @@ func trackSchnitzel(stringIn []string, day int) string {
 	dayCheck := 0
 	fileIsNew := false
 
-	fName := "counter.schnitzel"
+	osHome, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	
+	fName := osHome + string(os.PathSeparator) + ".counter.schnitzel"
 	content, err := os.ReadFile(fName)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -149,32 +150,31 @@ func trackSchnitzel(stringIn []string, day int) string {
 		}
 
 		counter, parseErr = strconv.Atoi(data[0])
-		CheckConversion(parseErr)
+		if parseErr != nil {
+			panic(parseErr)
+		}
 
 		dayCheck, parseErr = strconv.Atoi(data[1])
-		CheckConversion(parseErr)
+		if parseErr != nil {
+			panic(parseErr)
+		}
 	}
 
 	if dayCheck == day {
 		return strconv.Itoa(counter)
 	}
 
-	augmentedCounter := checkSchnitzel(stringIn, counter)
+	if checkSchnitzel(stringIn) {
+		counter++
+	}
 
-	updatedContent := []byte(strconv.Itoa(augmentedCounter) + ";" + strconv.Itoa(day))
+	updatedContent := []byte(strconv.Itoa(counter) + ";" + strconv.Itoa(day))
 	err = os.WriteFile(fName, updatedContent, 0666)
 	if err != nil {
 		fmt.Printf("Error writing file: %v\n", err)
 	}
 
-	return strconv.Itoa(augmentedCounter)
-}
-
-func CheckConversion(err error) {
-	if err != nil {
-		fmt.Printf("Failed to convert a value: %v\n", err)
-		panic(err)
-	}
+	return strconv.Itoa(counter)
 }
 
 func main() {
@@ -228,8 +228,8 @@ func main() {
 	month := int(now.Month())
 	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month) +
 		"   Wie oft gab es schon schnitzel? : " + trackSchnitzel(foodTitles, day) + " 🤯"
-	//fmt.Println(title)
-	//fmt.Println(outline)
+	// fmt.Println(title)
+	// fmt.Println(outline)
 
 	req, _ := http.NewRequest("POST", NTFY_LINK,
 		strings.NewReader(outline))
