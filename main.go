@@ -5,6 +5,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -111,6 +112,71 @@ func removeParen(stringIn string) string {
 	return tempLine
 }
 
+func checkSchnitzel(stringIn []string) bool {
+	temp := strings.Join(stringIn, ",")
+	strTrans := strings.ToLower(temp)
+	return strings.Contains(strTrans, "schnitzel")
+}
+
+func trackSchnitzel(stringIn []string, day int) string {
+	counter := 0
+	dayCheck := 0
+	fileIsNew := false
+
+	osHome, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	
+	fName := osHome + string(os.PathSeparator) + ".counter.schnitzel"
+	content, err := os.ReadFile(fName)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("File '%s' doesn't exist, creating it now\n", fName)
+			fileIsNew = true
+		} else {
+			fmt.Printf("Error reading file: %v\n", err)
+			return strconv.Itoa(counter)
+		}
+	}
+
+	if !fileIsNew {
+		var parseErr error
+
+		data := strings.Split(string(content), ";")
+		if len(data) != 2 {
+			fmt.Println("Something went wrong with the file, returning default value for counter")
+			return strconv.Itoa(counter)
+		}
+
+		counter, parseErr = strconv.Atoi(data[0])
+		if parseErr != nil {
+			panic(parseErr)
+		}
+
+		dayCheck, parseErr = strconv.Atoi(data[1])
+		if parseErr != nil {
+			panic(parseErr)
+		}
+	}
+
+	if dayCheck == day {
+		return strconv.Itoa(counter)
+	}
+
+	if checkSchnitzel(stringIn) {
+		counter++
+	}
+
+	updatedContent := []byte(strconv.Itoa(counter) + ";" + strconv.Itoa(day))
+	err = os.WriteFile(fName, updatedContent, 0666)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+	}
+
+	return strconv.Itoa(counter)
+}
+
 func main() {
 	dat, err := makeHTTPRequest(MENSA_LINK)
 	if err != nil {
@@ -160,9 +226,10 @@ func main() {
 	now := time.Now()
 	day := now.Day()
 	month := int(now.Month())
-	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month)
-	//fmt.Println(title)
-	//fmt.Println(outline)
+	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month) +
+		"   Wie oft gab es schon schnitzel? : " + trackSchnitzel(foodTitles, day) + " 🤯"
+	// fmt.Println(title)
+	// fmt.Println(outline)
 
 	req, _ := http.NewRequest("POST", NTFY_LINK,
 		strings.NewReader(outline))
