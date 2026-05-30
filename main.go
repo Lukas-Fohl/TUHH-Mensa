@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"html"
 	"io"
@@ -118,17 +119,13 @@ func checkSchnitzel(stringIn []string) bool {
 	return strings.Contains(strTrans, "schnitzel")
 }
 
-func trackSchnitzel(stringIn []string, day int) string {
+func trackSchnitzel(stringIn []string, day int, path string) string {
 	counter := 0
 	dayCheck := 0
 	fileIsNew := false
 
-	osHome, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
-	}
 
-	fName := osHome + string(os.PathSeparator) + ".counter.schnitzel"
+	fName := path + string(os.PathSeparator) + ".counter.schnitzel"
 	content, err := os.ReadFile(fName)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -182,17 +179,17 @@ func main() {
 		panic("please fill in the link for ntfy")
 	}
 
+	osHome, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	defaultPathFlag := flag.String("p", osHome, "path for Schnitzel-file")
+	flag.Parse()
+
 	dat, err := makeHTTPRequest(MENSA_LINK)
 	if err != nil {
 		panic(err)
 	}
-
-	/*
-		dat, err := os.ReadFile("out.html")
-		if err != nil {
-			panic(err)
-		}
-	*/
 
 	lines := strings.Split(string(dat), "\n")
 	finishedLines := []string{}
@@ -231,7 +228,7 @@ func main() {
 	day := now.Day()
 	month := int(now.Month())
 	title := "🍽️ TUHH-Speiseplan " + strconv.Itoa(day) + "." + strconv.Itoa(month) +
-		"   Wie oft gab es schon schnitzel? : " + trackSchnitzel(foodTitles, day) + " 🤯"
+		"   Wie oft gab es schon schnitzel? : " + trackSchnitzel(foodTitles, day, *defaultPathFlag) + " 🤯"
 	// fmt.Println(title)
 	// fmt.Println(outline)
 
